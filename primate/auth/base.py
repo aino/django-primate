@@ -130,11 +130,7 @@ class UserBase(models.Model):
         if raw_password is None:
             self.set_unusable_password()
         else:
-            import random
-            algo = 'sha1'
-            salt = get_hexdigest(algo, str(random.random()), str(random.random()))[:5]
-            hsh = get_hexdigest(algo, salt, raw_password)
-            self.password = '%s$%s$%s' % (algo, salt, hsh)
+            self.password = hash_password(raw_password)
 
     def check_password(self, raw_password):
         """

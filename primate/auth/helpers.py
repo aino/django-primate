@@ -1,4 +1,6 @@
 import datetime
+
+from django.conf import settings
 from django.contrib import auth
 from django.contrib.auth.signals import user_logged_in
 from django.utils.encoding import smart_str
@@ -7,8 +9,8 @@ from django.utils.hashcompat import md5_constructor, sha_constructor
 
 
 __all__ = ('SiteUserNotAvailable', 'get_hexdigest', 'check_password',
-           'update_last_login', '_user_get_all_permissions', '_user_has_perm',
-           '_user_has_module_perms')
+           'hash_password', 'update_last_login', '_user_get_all_permissions',
+           '_user_has_perm', '_user_has_module_perms')
 
 
 class SiteUserNotAvailable(Exception):
@@ -36,12 +38,52 @@ def get_hexdigest(algorithm, salt, raw_password):
     raise ValueError("Got unknown password algorithm type in password.")
 
 
+def hash_password(raw_password):
+    algo = getattr(settings, 'HASH_PASSWORD_ALGORITHM', 'sha1')
+
+    if algo == 'bcrypt':
+        try:
+            import bcrypt
+        except ImportError:
+            raise ValueError('"bcrypt" password algorithm not supported in this '
+                             'environment')
+
+        rounds = getattr(settings, 'HASH_PASSWORD_BCRYPT_ROUNDS', 12)
+        salt = bcrypt.gensalt(rounds)
+
+        # hashpw() returns salt+hash so we get only the hash part that
+        # starts at position 29
+        hsh = bcrypt.hashpw(raw_password, salt)[29:]
+
+        # bcrypt salts uses '$' to delimit their informations
+        # and it causes conflicts with the Django.
+        salt = salt.replace("$", "!")
+
+    else:
+        import random
+        salt = get_hexdigest(algo, str(random.random()), str(random.random()))[:5]
+        hsh = get_hexdigest(algo, salt, raw_password)
+
+    return '%s$%s$%s' % (algo, salt, hsh)
+
+
 def check_password(raw_password, enc_password):
     """
     Returns a boolean of whether the raw_password was correct. Handles
     encryption formats behind the scenes.
     """
     algo, salt, hsh = enc_password.split('$')
+
+    if algo == "bcrypt":
+        try:
+            import bcrypt
+        except ImportError:
+            raise ValueError('"bcrypt" password algorithm not supported in this '
+                             'environment')
+
+        salt = salt.replace("!", "$")
+        return bcrypt.hashpw(raw_password, salt) == salt + hsh
+
     return hsh == get_hexdigest(algo, salt, raw_password)
 
 
