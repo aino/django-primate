@@ -95,8 +95,8 @@ class UserBase(models.Model):
     last_login = models.DateTimeField(_('last login'), default=datetime.datetime.now, editable=False)
     date_joined = models.DateTimeField(_('date joined'), default=datetime.datetime.now, editable=False)
     groups = models.ManyToManyField('auth.Group', verbose_name=_('groups'), blank=True,
-        help_text=_("In addition to the permissions manually assigned, this user will also get all permissions granted to each group he/she is in."))
-    user_permissions = models.ManyToManyField('auth.Permission', verbose_name=_('user permissions'), blank=True)
+        help_text=_("In addition to the permissions manually assigned, this user will also get all permissions granted to each group he/she is in."), related_name='groups')
+    user_permissions = models.ManyToManyField('auth.Permission', verbose_name=_('user permissions'), blank=True, related_name='perms')
 
     objects = UserManager()
 
