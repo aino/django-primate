@@ -13,4 +13,4 @@ class UserChangeForm(auth.forms.UserChangeForm):
     def __init__(self, *args, **kwargs):
         super(UserChangeForm, self).__init__(*args, **kwargs)
         self.fields['password'].widget = PassWidget()
-
+        self.fields['password'].required = False
